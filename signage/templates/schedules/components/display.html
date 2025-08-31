@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Signage - {{ title }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        /* Tampilan default ketika tidak ada konten */
+        .default-view {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .default-view .content {
+            text-align: center;
+            max-width: 800px;
+            padding: 20px;
+            z-index: 2;
+        }
+        
+        .default-view h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.6);
+        }
+        
+        .default-view p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        /* Tampilan media */
+        .media-view {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            display: none;
+        }
+        
+        .media-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        .media-content {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            object-position: center;
+        }
+        
+        /* Status bar */
+        .status-bar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .status-bar:hover {
+            opacity: 1;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            margin-right: 10px;
+            box-shadow: 0 0 10px #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 10px #4CAF50; }
+            50% { box-shadow: 0 0 20px #4CAF50; }
+            100% { box-shadow: 0 0 10px #4CAF50; }
+        }
+        
+        .clock {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .device-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            text-align: left;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .device-info:hover {
+            opacity: 1;
+        }
+        
+        .device-info h3 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+        
+        .device-info p {
+            font-size: 0.9rem;
+            margin: 2px 0;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 10;
+        }
+        
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+            opacity: 1;
+        }
+        
+        .btn i {
+            margin-right: 8px;
+            font-size: 1.2rem;
+        }
+        
+        .notification {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .notification.show {
+            opacity: 1;
+        }
+        
+        .schedule-info {
+            position: absolute;
+            bottom: 80px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            backdrop-filter: blur(5px);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .schedule-info:hover {
+            opacity: 1;
+        }
+        
+        .schedule-info h3 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        
+        .schedule-info p {
+            font-size: 1rem;
+            margin: 2px 0;
+        }
+        
+        .no-content {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .no-content h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* Slideshow untuk background default */
+        .slideshow {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 1s ease;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .slide.active {
+            opacity: 0.3;
+        }
+        
+        /* Refresh indicator */
+        .refresh-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff9800;
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .refresh-indicator.refreshing {
+            opacity: 1;
+            animation: pulse 1s infinite;
+        }
+        
+        .refresh-indicator.paused {
+            background: #f44336;
+            opacity: 0.7;
+        }
+        
+        /* Schedule status indicator */
+        .schedule-status {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .schedule-status:hover {
+            opacity: 1;
+        }
+        
+        .schedule-status.active {
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .schedule-status.waiting {
+            border-left: 4px solid #ff9800;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Tampilan default -->
+        <div class="default-view" id="defaultView">
+            <div class="slideshow">
+                <div class="slide"></div>
+                <div class="slide"></div>
+                <div class="slide"></div>
+            </div>
+            
+            <div class="content">
+                <h1>DIGITAL SIGNAGE SYSTEM</h1>
+                <p>Automatic full-screen display solution for presentations, information, and promotions</p>
+                
+                {% if not media_content %}
+                <div class="no-content">
+                    <h2>No Active Content</h2>
+                    <p>{% if next_schedule_info %}Next schedule: {{ next_schedule_info.name }} at {{ next_schedule_info.start_time }}{% else %}No scheduled content available{% endif %}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Tampilan media -->
+        <div class="media-view" id="mediaView" style="display: none;">
+            <div class="media-container">
+                <!-- Media content will be dynamically inserted here -->
+            </div>
+        </div>
+        
+        <!-- Backend data injection -->
+        <script id="backend-media-data" type="application/json">
+            {
+                "media_content": {{ media_content_json|safe }},
+                "schedule_info": {{ schedule_info_json|safe }},
+                "device": {
+                    "name": "{{ device.name|default:'' }}",
+                    "ip": "{{ ip_address|default:'' }}"
+                },
+                "group_info": {{ group_info_json|safe }},
+                "next_schedule_info": {{ next_schedule_info_json|safe }}
+            }
+        </script>
+        
+        <!-- Device info -->
+        {% if device %}
+        <div class="device-info">
+            <h3>Device Info</h3>
+            <p><strong>Name:</strong> {{ device.name }}</p>
+            <p><strong>IP:</strong> {{ ip_address }}</p>
+            {% if group_info %}
+            <p><strong>Group:</strong> {{ group_info.name }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Status bar -->
+        <div class="status-bar">
+            <div class="status-indicator"></div>
+            <div class="clock">00:00:00</div>
+            <div class="refresh-indicator" id="refreshIndicator"></div>
+        </div>
+        
+        <!-- Schedule status -->
+        <div class="schedule-status" id="scheduleStatus">
+            Schedule Status: Monitoring
+        </div>
+        
+        <!-- Schedule info -->
+        {% if schedule_info %}
+        <div class="schedule-info">
+            <h3>Active Schedule: {{ schedule_info.name }}</h3>
+            <p>{{ schedule_info.date }} | {{ schedule_info.start_time }} - {{ schedule_info.end_time }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- Notification -->
+        <div class="notification" id="notification">Fullscreen mode activated</div>
+        
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn" onclick="openFullscreen()"><i class="fas fa-play"></i> Play</button>
+            <button class="btn" onclick="exitToLogin()"><i class="fas fa-door-open"></i> Exit</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let autoRefreshInterval = null;
+        let scheduleCheckInterval = null;
+        let isRefreshing = false;
+        let hasMediaContent = false;
+        let currentScheduleEndTime = null;
+        let nextScheduleStartTime = null;
+        let isInFullscreen = false;
+        let autoRefreshEnabled = true;
+        let lastKnownSchedule = null;
+        let lastKnownMediaUrl = null;
+        let isInitialLoad = true;
+        
+        // Schedule and video tracking
+        let currentScheduleData = null;
+        let isScheduleActive = false;
+        let videoStartTime = null;
+        let videoDuration = null;
+        let autoRefreshPaused = false;
+        let scheduleEndTime = null;
+        let refreshPausedUntil = null;
+        
+        // Store fullscreen state in a way that persists
+        let fullscreenState = {
+            wasInFullscreen: false,
+            shouldReturnToFullscreen: false
+        };
+        
+        // Initialize variables and content
+        function initializeVariables() {
+            const scheduleElement = document.querySelector('.schedule-info');
+            if (scheduleElement) {
+                const scheduleText = scheduleElement.textContent || '';
+                lastKnownSchedule = scheduleText.trim();
+            }
+            
+            const mediaView = document.getElementById('mediaView');
+            const mediaContent = mediaView ? mediaView.querySelector('.media-content') : null;
+            if (mediaContent) {
+                lastKnownMediaUrl = mediaContent.src || mediaContent.getAttribute('src') || '';
+            }
+            hasMediaContent = !!(mediaContent && lastKnownMediaUrl);
+        }
+        
+        // Parse schedule data and determine active status
+        function parseScheduleData() {
+            try {
+                const mediaDataScript = document.getElementById('backend-media-data');
+                if (mediaDataScript) {
+                    const data = JSON.parse(mediaDataScript.textContent);
+                    currentScheduleData = data.schedule_info;
+                    
+                    if (currentScheduleData) {
+                        const now = new Date();
+                        const today = now.toISOString().split('T')[0];
+                        
+                        // Parse schedule times
+                        const startDateTime = new Date(`${today}T${currentScheduleData.start_time}`);
+                        const endDateTime = new Date(`${today}T${currentScheduleData.end_time}`);
+                        
+                        // Check if schedule is currently active
+                        const wasActive = isScheduleActive;
+                        isScheduleActive = now >= startDateTime && now <= endDateTime;
+                        
+                        // Log schedule transition
+                        if (wasActive !== isScheduleActive) {
+                            console.log(`Schedule status changed: ${wasActive ? 'active' : 'inactive'} -> ${isScheduleActive ? 'active' : 'inactive'}`);
+                            console.log(`Current time: ${now.toLocaleTimeString()}, Schedule: ${startDateTime.toLocaleTimeString()} - ${endDateTime.toLocaleTimeString()}`);
+                        }
+                        
+                        if (isScheduleActive && !autoRefreshPaused) {
+                            scheduleEndTime = endDateTime;
+                            console.log(`Schedule is active until: ${endDateTime.toLocaleTimeString()}`);
+                            pauseAutoRefreshForSchedule(endDateTime);
+                        } else if (!isScheduleActive && autoRefreshPaused) {
+                            // Schedule ended but autorefresh is still paused - resume it
+                            console.log('Schedule ended, but autorefresh still paused - resuming immediately');
+                            resumeAutoRefresh();
+                        }
+                        
+                        updateScheduleStatus();
+                    } else {
+                        // No schedule data
+                        if (isScheduleActive || autoRefreshPaused) {
+                            console.log('No schedule data found, resuming normal operation');
+                            isScheduleActive = false;
+                            if (autoRefreshPaused) {
+                                resumeAutoRefresh();
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing schedule data:', e);
+                currentScheduleData = null;
+                if (isScheduleActive || autoRefreshPaused) {
+                    isScheduleActive = false;
+                    if (autoRefreshPaused) {
+                        resumeAutoRefresh();
+                    }
+                }
+            }
+        }
+        
+        // Pause auto refresh during active schedule
+        function pauseAutoRefreshForSchedule(endTime) {
+            const now = new Date();
+            const remainingTime = endTime.getTime() - now.getTime();
+            
+            if (remainingTime > 0) {
+                autoRefreshPaused = true;
+                refreshPausedUntil = endTime;
+                
+                console.log(`Auto refresh paused for ${Math.round(remainingTime / 1000)} seconds until schedule ends at ${endTime.toLocaleTimeString()}`);
+                
+                // Update UI indicator
+                const refreshIndicator = document.getElementById('refreshIndicator');
+                if (refreshIndicator) {
+                    refreshIndicator.classList.add('paused');
+                    refreshIndicator.title = `Auto refresh paused until ${endTime.toLocaleTimeString()}`;
+                }
+                
+                // Resume auto refresh exactly when schedule ends (no buffer)
+                setTimeout(() => {
+                    resumeAutoRefresh();
+                }, remainingTime);
+            }
+        }
+        
+        // Resume auto refresh after schedule ends
+        function resumeAutoRefresh() {
+            autoRefreshPaused = false;
+            refreshPausedUntil = null;
+            isScheduleActive = false;
+            
+            console.log('Auto refresh resumed - schedule ended, forcing immediate refresh');
+            
+            // Update UI indicator
+            const refreshIndicator = document.getElementById('refreshIndicator');
+            if (refreshIndicator) {
+                refreshIndicator.classList.remove('paused');
+                refreshIndicator.title = '';
+            }
+            
+            updateScheduleStatus();
+            
+            // Force immediate refresh when schedule ends (no delay)
+            if (!isRefreshing) {
+                console.log('Schedule ended - performing immediate refresh to return to default view');
+                performSilentReload();
+            }
+        }
+        
+        // Update schedule status indicator
+        function updateScheduleStatus() {
+            const scheduleStatus = document.getElementById('scheduleStatus');
+            if (!scheduleStatus) return;
+            
+            if (isScheduleActive && currentScheduleData) {
+                scheduleStatus.textContent = `Active: ${currentScheduleData.name}`;
+                scheduleStatus.className = 'schedule-status active';
+            } else if (autoRefreshPaused) {
+                scheduleStatus.textContent = 'Schedule Running';
+                scheduleStatus.className = 'schedule-status active';
+            } else {
+                scheduleStatus.textContent = 'Monitoring';
+                scheduleStatus.className = 'schedule-status waiting';
+            }
+        }
+        
+        // Track video playback for duration-based refresh control
+        function trackVideoPlayback(videoElement) {
+            if (!videoElement) return;
+            
+            videoElement.addEventListener('loadedmetadata', function() {
+                videoDuration = videoElement.duration;
+                videoStartTime = Date.now();
+                
+                console.log(`Video duration: ${videoDuration} seconds`);
+                
+                // If we have both schedule and video, use the shorter duration for refresh pause
+                if (isScheduleActive && scheduleEndTime) {
+                    const scheduleRemainingTime = (scheduleEndTime.getTime() - Date.now()) / 1000;
+                    const effectiveDuration = Math.min(videoDuration, scheduleRemainingTime);
+                    
+                    console.log(`Using effective duration: ${effectiveDuration} seconds`);
+                }
+            });
+            
+            videoElement.addEventListener('play', function() {
+                videoStartTime = Date.now();
+                console.log('Video playback started');
+            });
+            
+            videoElement.addEventListener('ended', function() {
+                console.log('Video playback ended');
+                videoStartTime = null;
+                
+                // Only resume auto refresh if schedule is also ended
+                if (!isScheduleActive) {
+                    setTimeout(() => {
+                        if (!isRefreshing) {
+                            checkForUpdates();
+                        }
+                    }, 1000);
+                }
+            });
+        }
+        
+        // Check if refresh should be allowed
+        function canAutoRefresh() {
+            const now = Date.now();
+            
+            // Don't refresh if explicitly paused
+            if (autoRefreshPaused) {
+                console.log('Auto refresh blocked: paused for active schedule');
+                return false;
+            }
+            
+            // Don't refresh if schedule is still active
+            if (isScheduleActive && scheduleEndTime && now < scheduleEndTime.getTime()) {
+                console.log('Auto refresh blocked: schedule still active');
+                return false;
+            }
+            
+            // Don't refresh if video is playing and hasn't finished yet
+            if (videoStartTime && videoDuration) {
+                const videoElapsed = (now - videoStartTime) / 1000;
+                if (videoElapsed < videoDuration - 2) { // 2 seconds buffer
+                    console.log(`Auto refresh blocked: video still playing (${Math.round(videoElapsed)}/${Math.round(videoDuration)}s)`);
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        // Initialize display based on media content
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeVariables();
+            parseScheduleData();
+            setupInitialContent();
+            
+            // Check if we should return to fullscreen after reload
+            checkFullscreenRecovery();
+            
+            // Auto fullscreen after 1 second (only on initial load)
+            if (isInitialLoad) {
+                setTimeout(openFullscreen, 1000);
+            }
+            
+            // Start intelligent auto refresh
+            startIntelligentAutoRefresh();
+            
+            // Setup media handling
+            setupMediaHandling();
+            
+            // Start schedule monitoring
+            startScheduleMonitoring();
+            
+            isInitialLoad = false;
+        });
+        
+        // Check for fullscreen recovery after page reload
+        function checkFullscreenRecovery() {
+            try {
+                const shouldRecover = sessionStorage.getItem('signage_fullscreen_recovery');
+                if (shouldRecover === 'true') {
+                    sessionStorage.removeItem('signage_fullscreen_recovery');
+                    setTimeout(openFullscreen, 500);
+                    fullscreenState.shouldReturnToFullscreen = true;
+                }
+            } catch (e) {
+                // SessionStorage not available
+            }
+        }
+        
+        // Setup initial content from backend
+        function setupInitialContent() {
+            const defaultView = document.getElementById('defaultView');
+            const mediaView = document.getElementById('mediaView');
+            const mediaContainer = mediaView.querySelector('.media-container');
+            
+            try {
+                const mediaDataScript = document.getElementById('backend-media-data');
+                if (mediaDataScript) {
+                    const data = JSON.parse(mediaDataScript.textContent);
+                    
+                    if (data.media_content) {
+                        setupMediaContent(data.media_content, mediaContainer);
+                        mediaView.style.display = 'block';
+                        if (defaultView) defaultView.style.display = 'none';
+                        hasMediaContent = true;
+                        lastKnownMediaUrl = data.media_content.url;
+                    } else {
+                        if (defaultView) defaultView.style.display = 'flex';
+                        mediaView.style.display = 'none';
+                        hasMediaContent = false;
+                        lastKnownMediaUrl = null;
+                    }
+                    
+                    if (data.schedule_info) {
+                        lastKnownSchedule = `Active Schedule: ${data.schedule_info.name}`;
+                    }
+                }
+            } catch (e) {
+                console.log('No backend media data found, using default');
+                if (defaultView) defaultView.style.display = 'flex';
+                mediaView.style.display = 'none';
+                hasMediaContent = false;
+            }
+        }
+        
+        // Setup media content element
+        function setupMediaContent(mediaContent, container) {
+            let mediaElement = '';
+            
+            if (mediaContent.type === 'video') {
+                mediaElement = `
+                    <video class="media-content" id="mediaPlayer" muted loop playsinline preload="auto">
+                        <source src="${mediaContent.url}" type="video/mp4">
+                        Your browser does not support video.
+                    </video>
+                `;
+            } else if (mediaContent.type === 'image') {
+                mediaElement = `
+                    <img class="media-content" src="${mediaContent.url}" alt="${mediaContent.name || 'Media Content'}" id="mediaImage">
+                `;
+            }
+            
+            if (mediaElement && container) {
+                container.innerHTML = mediaElement;
+                
+                // Setup video autoplay after DOM update
+                if (mediaContent.type === 'video') {
+                    setTimeout(() => {
+                        const videoElement = document.getElementById('mediaPlayer');
+                        if (videoElement) {
+                            trackVideoPlayback(videoElement);
+                            forceVideoPlay(videoElement);
+                        }
+                    }, 100);
+                }
+            }
+        }
+        
+        // Force video to play with robust method
+        function forceVideoPlay(videoElement) {
+            if (!videoElement) return;
+            
+            console.log('Attempting to play video...');
+            
+            // Set all necessary attributes
+            videoElement.muted = true;
+            videoElement.loop = true;
+            videoElement.autoplay = true;
+            
+            // Multiple play attempts
+            let playAttempt = 0;
+            
+            function attemptPlay() {
+                playAttempt++;
+                console.log(`Video play attempt ${playAttempt}`);
+                
+                const playPromise = videoElement.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('Video started playing successfully');
+                            videoStartTime = Date.now();
+                        })
+                        .catch((error) => {
+                            console.log(`Play attempt ${playAttempt} failed:`, error);
+                            
+                            if (playAttempt < 5) {
+                                setTimeout(attemptPlay, 500);
+                            } else {
+                                console.error('All video play attempts failed');
+                            }
+                        });
+                } else {
+                    // Older browsers
+                    if (playAttempt < 3) {
+                        setTimeout(attemptPlay, 500);
+                    }
+                }
+            }
+            
+            // Start attempting to play
+            attemptPlay();
+            
+            // Also try when video is loaded
+            videoElement.addEventListener('loadeddata', function() {
+                if (videoElement.paused) {
+                    attemptPlay();
+                }
+            });
+            
+            videoElement.addEventListener('canplaythrough', function() {
+                if (videoElement.paused) {
+                    attemptPlay();
+                }
+            });
+        }
+        
+        // Intelligent auto refresh that respects schedules and video playback
+        function startIntelligentAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            autoRefreshInterval = setInterval(function() {
+                if (autoRefreshEnabled && !isRefreshing && canAutoRefresh()) {
+                    checkForUpdates();
+                } else if (autoRefreshEnabled) {
+                    console.log('Auto refresh skipped - waiting for appropriate time');
+                }
+            }, 15000); // 15 seconds interval (more conservative)
+            
+            console.log('Intelligent auto refresh started (15 second interval with smart blocking)');
+        }
+        
+        // Check for updates via AJAX and only reload if changes detected
+        async function checkForUpdates() {
+            if (isRefreshing || !canAutoRefresh()) return;
+            
+            isRefreshing = true;
+            const refreshIndicator = document.getElementById('refreshIndicator');
+            if (refreshIndicator && !autoRefreshPaused) {
+                refreshIndicator.classList.add('refreshing');
+            }
+            
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        const hasChanges = detectContentChanges(data.data);
+                        
+                        if (hasChanges) {
+                            console.log('Content changes detected, reloading page...');
+                            performSilentReload();
+                        } else {
+                            console.log('No content changes detected');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Update check error:', error);
+            } finally {
+                isRefreshing = false;
+                setTimeout(() => {
+                    if (refreshIndicator && !autoRefreshPaused) {
+                        refreshIndicator.classList.remove('refreshing');
+                    }
+                }, 1000);
+            }
+        }
+        
+        // Detect if there are actual content changes
+        function detectContentChanges(data) {
+            const newScheduleName = data.schedule_info ? data.schedule_info.name : null;
+            const newMediaUrl = data.media_content ? data.media_content.url : null;
+            
+            const currentScheduleElement = document.querySelector('.schedule-info h3');
+            const currentScheduleName = currentScheduleElement ? 
+                currentScheduleElement.textContent.replace('Active Schedule: ', '').trim() : null;
+            
+            const currentMediaElement = document.querySelector('#mediaView .media-content');
+            const currentMediaUrl = currentMediaElement ? 
+                (currentMediaElement.src || currentMediaElement.getAttribute('src')) : null;
+            
+            // Simple comparison
+            const scheduleChanged = newScheduleName !== currentScheduleName;
+            const mediaChanged = newMediaUrl !== currentMediaUrl;
+            const mediaPresenceChanged = !!data.media_content !== hasMediaContent;
+            
+            console.log('Change detection:', {
+                scheduleChanged,
+                mediaChanged,
+                mediaPresenceChanged,
+                current: { schedule: currentScheduleName, media: currentMediaUrl },
+                new: { schedule: newScheduleName, media: newMediaUrl }
+            });
+            
+            return scheduleChanged || mediaChanged || mediaPresenceChanged;
+        }
+        
+        // Perform silent reload that preserves fullscreen
+        function performSilentReload() {
+            // Store fullscreen state
+            if (isInFullscreen) {
+                try {
+                    sessionStorage.setItem('signage_fullscreen_recovery', 'true');
+                } catch (e) {
+                    // Fallback without sessionStorage
+                }
+                fullscreenState.wasInFullscreen = true;
+            }
+            
+            // Reload page without visual disruption
+            window.location.reload();
+        }
+        
+        // Schedule monitoring with intelligent timing
+        function startScheduleMonitoring() {
+            if (scheduleCheckInterval) {
+                clearInterval(scheduleCheckInterval);
+            }
+            
+            // Check more frequently for precise schedule timing
+            scheduleCheckInterval = setInterval(() => {
+                const previousScheduleActive = isScheduleActive;
+                parseScheduleData(); // Re-parse schedule status
+                
+                // If schedule just ended, force immediate refresh
+                if (previousScheduleActive && !isScheduleActive && !autoRefreshPaused) {
+                    console.log('Schedule transition detected: active -> inactive, forcing refresh');
+                    if (!isRefreshing) {
+                        performSilentReload();
+                    }
+                    return;
+                }
+                
+                // Only check for updates if not in active schedule
+                if (autoRefreshEnabled && !isRefreshing && canAutoRefresh()) {
+                    checkForUpdates();
+                }
+            }, 5000); // Check every 5 seconds for more precise timing
+        }
+        
+        // Setup media handling
+        function setupMediaHandling() {
+            const videoElement = document.getElementById('mediaPlayer');
+            const imageElement = document.getElementById('mediaImage');
+            
+            if (videoElement) {
+                setupVideoEvents(videoElement);
+                trackVideoPlayback(videoElement);
+            }
+            
+            if (imageElement) {
+                setupImageEvents(imageElement);
+            }
+        }
+        
+        // Setup video events
+        function setupVideoEvents(videoElement) {
+            videoElement.addEventListener('error', function(e) {
+                console.error('Video error:', e);
+            });
+            
+            videoElement.addEventListener('loadstart', function() {
+                console.log('Video loading started');
+            });
+            
+            videoElement.addEventListener('loadedmetadata', function() {
+                console.log('Video metadata loaded');
+                forceVideoPlay(videoElement);
+            });
+            
+            videoElement.addEventListener('loadeddata', function() {
+                console.log('Video data loaded');
+                forceVideoPlay(videoElement);
+            });
+            
+            videoElement.addEventListener('canplay', function() {
+                console.log('Video can play');
+                forceVideoPlay(videoElement);
+            });
+            
+            videoElement.addEventListener('ended', function() {
+                console.log('Video ended, should loop');
+                // Let loop attribute handle this
+            });
+            
+            // Ensure video plays immediately
+            forceVideoPlay(videoElement);
+        }
+        
+        // Setup image events
+        function setupImageEvents(imageElement) {
+            imageElement.addEventListener('error', function(e) {
+                console.error('Image error:', e);
+            });
+            
+            imageElement.addEventListener('load', function() {
+                console.log('Image loaded successfully');
+            });
+        }
+        
+        // Fullscreen functions
+        function openFullscreen() {
+            const elem = document.documentElement;
+            
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                elem.mozRequestFullScreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+            
+            isInFullscreen = true;
+            fullscreenState.wasInFullscreen = true;
+            
+            // Ensure video plays after entering fullscreen
+            setTimeout(() => {
+                const videoElement = document.getElementById('mediaPlayer');
+                if (videoElement) {
+                    forceVideoPlay(videoElement);
+                }
+            }, 500);
+        }
+        
+        function exitToLogin() {
+            // Clear fullscreen recovery flag
+            try {
+                sessionStorage.removeItem('signage_fullscreen_recovery');
+            } catch (e) {
+                // Ignore
+            }
+            
+            // Exit fullscreen first
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+            
+            setTimeout(function() {
+                window.location.href = '/login/';
+            }, 500);
+        }
+        
+        // Fullscreen change detection
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+        
+        function handleFullscreenChange() {
+            const fullscreenElement = document.fullscreenElement || 
+                                    document.webkitFullscreenElement || 
+                                    document.mozFullScreenElement || 
+                                    document.msFullscreenElement;
+            
+            const wasInFullscreen = isInFullscreen;
+            isInFullscreen = !!fullscreenElement;
+            
+            // Only auto-return if accidentally exited (not via exit button)
+            if (!fullscreenElement && wasInFullscreen && !fullscreenState.shouldReturnToFullscreen) {
+                setTimeout(() => {
+                    if (!isInFullscreen) {
+                        openFullscreen();
+                    }
+                }, 8000); // 8 seconds delay
+            }
+            
+            // Ensure video plays after fullscreen changes
+            if (isInFullscreen) {
+                setTimeout(() => {
+                    const videoElement = document.getElementById('mediaPlayer');
+                    if (videoElement) {
+                        forceVideoPlay(videoElement);
+                    }
+                }, 300);
+            }
+        }
+        
+        // Escape key handler
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                fullscreenState.shouldReturnToFullscreen = false;
+                exitToLogin();
+            }
+        });
+        
+        // Notification function
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            if (notification) {
+                notification.textContent = message;
+                notification.classList.add('show');
+                
+                setTimeout(function() {
+                    notification.classList.remove('show');
+                }, 2000); // Shorter notification time
+            }
+        }
+        
+        // Clock update
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            const clockElement = document.querySelector('.clock');
+            if (clockElement) {
+                clockElement.textContent = timeStr;
+            }
+        }
+        
+        setInterval(updateClock, 1000);
+        updateClock();
+        
+        // Slideshow for default view
+        let currentSlide = 0;
+        
+        function changeSlide() {
+            const slides = document.querySelectorAll('.slide');
+            if (slides.length === 0) return;
+            
+            slides.forEach(slide => slide.classList.remove('active'));
+            currentSlide = (currentSlide + 1) % slides.length;
+            slides[currentSlide].classList.add('active');
+        }
+        
+        setInterval(changeSlide, 5000);
+        
+        // Page visibility handling - ensure video plays when page becomes visible
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                const videoElement = document.getElementById('mediaPlayer');
+                if (videoElement) {
+                    setTimeout(() => forceVideoPlay(videoElement), 200);
+                }
+            }
+        });
+        
+        // User interaction handlers to help with autoplay policy
+        document.addEventListener('click', function() {
+            const videoElement = document.getElementById('mediaPlayer');
+            if (videoElement && videoElement.paused) {
+                forceVideoPlay(videoElement);
+            }
+        });
+        
+        document.addEventListener('touchstart', function() {
+            const videoElement = document.getElementById('mediaPlayer');
+            if (videoElement && videoElement.paused) {
+                forceVideoPlay(videoElement);
+            }
+        });
+        
+        // Window focus handler
+        window.addEventListener('focus', function() {
+            const videoElement = document.getElementById('mediaPlayer');
+            if (videoElement && videoElement.paused) {
+                setTimeout(() => forceVideoPlay(videoElement), 100);
+            }
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            if (scheduleCheckInterval) {
+                clearInterval(scheduleCheckInterval);
+            }
+        });
+        
+        // Debug functions
+        window.forceRefresh = function() {
+            console.log('Manual refresh triggered');
+            performSilentReload();
+        };
+        
+        window.toggleAutoRefresh = function() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+            console.log('Auto refresh:', autoRefreshEnabled ? 'enabled' : 'disabled');
+        };
+        
+        window.playVideo = function() {
+            const videoElement = document.getElementById('mediaPlayer');
+            if (videoElement) {
+                forceVideoPlay(videoElement);
+            }
+        };
+        
+        window.checkRefreshStatus = function() {
+            console.log('Refresh Status:', {
+                autoRefreshEnabled,
+                autoRefreshPaused,
+                isScheduleActive,
+                isRefreshing,
+                canRefresh: canAutoRefresh(),
+                scheduleEndTime: scheduleEndTime ? scheduleEndTime.toLocaleTimeString() : null,
+                videoDuration,
+                videoStartTime: videoStartTime ? new Date(videoStartTime).toLocaleTimeString() : null
+            });
+        };
+        
+    </script>
+</body>
+</html>
